@@ -25,7 +25,8 @@ class PasteimgApp:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.image_counter = 0
         self.saved_images: list[Path] = []
-        self.preview_photos: list[ImageTk.PhotoImage] = []  # 参照保持用
+        self.preview_photos: dict[Path, ImageTk.PhotoImage] = {}  # パスと画像の対応
+        self.image_entries: dict[Path, ttk.Frame] = {}  # パスとフレームの対応
 
         # メインウィンドウ
         self.root = tk.Tk()
@@ -55,6 +56,20 @@ class PasteimgApp:
         style.configure("Path.TLabel", background="#3d3d3d", foreground="#a0c4ff", padding=5)
         style.configure("PathHover.TLabel", background="#4d4d4d", foreground="#a0c4ff", padding=5)
 
+        # ボタンスタイル
+        style.configure(
+            "Delete.TButton",
+            background="#ff6b6b",
+            foreground="#ffffff",
+            padding=(5, 2),
+        )
+        style.configure(
+            "Clear.TButton",
+            background="#ff6b6b",
+            foreground="#ffffff",
+            padding=(8, 4),
+        )
+
         # ヘッダーフレーム
         header_frame = ttk.Frame(self.root, padding=(10, 10, 10, 5))
         header_frame.pack(fill=tk.X)
@@ -66,6 +81,21 @@ class PasteimgApp:
             font=("", 12),
         )
         label.pack(side=tk.LEFT)
+
+        # オールクリアボタン
+        self.clear_all_btn = tk.Button(
+            header_frame,
+            text="すべて削除",
+            command=self._clear_all,
+            bg="#ff6b6b",
+            fg="#ffffff",
+            activebackground="#ff5252",
+            activeforeground="#ffffff",
+            relief="flat",
+            cursor="hand2",
+            font=("", 9),
+        )
+        self.clear_all_btn.pack(side=tk.RIGHT, padx=(10, 0))
 
         # ステータスラベル
         self.status_label = ttk.Label(
@@ -168,6 +198,10 @@ class PasteimgApp:
         entry_frame = ttk.Frame(self.scrollable_frame)
         entry_frame.pack(fill=tk.X, pady=(0, 10))
 
+        # 画像とボタンを並べるコンテナ
+        image_container = ttk.Frame(entry_frame)
+        image_container.pack(fill=tk.X)
+
         # プレビュー画像
         max_width = 400
         max_height = 200
@@ -180,10 +214,27 @@ class PasteimgApp:
             preview_image = image
 
         photo = ImageTk.PhotoImage(preview_image)
-        self.preview_photos.append(photo)  # 参照保持
+        self.preview_photos[path] = photo  # 参照保持
 
-        preview_label = ttk.Label(entry_frame, image=photo)
-        preview_label.pack(pady=(5, 5))
+        preview_label = ttk.Label(image_container, image=photo)
+        preview_label.pack(side=tk.LEFT, pady=(5, 5), padx=(5, 0))
+
+        # 削除ボタン
+        delete_btn = tk.Button(
+            image_container,
+            text="×",
+            command=lambda p=path: self._delete_image(p),
+            bg="#ff6b6b",
+            fg="#ffffff",
+            activebackground="#ff5252",
+            activeforeground="#ffffff",
+            relief="flat",
+            cursor="hand2",
+            font=("", 12, "bold"),
+            width=2,
+            height=1,
+        )
+        delete_btn.pack(side=tk.RIGHT, padx=(0, 5), anchor="n", pady=(5, 0))
 
         # パス表示ラベル（クリックでコピー）
         path_str = str(path)
@@ -201,6 +252,9 @@ class PasteimgApp:
 
         # クリックでコピー
         path_label.bind("<Button-1>", lambda e, p=path, lbl=path_label: self._copy_path(p, lbl))
+
+        # エントリを管理用辞書に追加
+        self.image_entries[path] = entry_frame
 
     def _create_tooltip(self, widget, text: str):
         """ツールチップを作成"""
@@ -256,6 +310,66 @@ class PasteimgApp:
             foreground="#ff6b6b" if error else "#69db7c",
         )
         print(f"[{'ERROR' if error else 'INFO'}] {message}")
+
+    def _delete_image(self, path: Path):
+        """指定した画像を削除"""
+        # ファイルを削除
+        path.unlink(missing_ok=True)
+
+        # リストから削除
+        if path in self.saved_images:
+            self.saved_images.remove(path)
+
+        # 画像参照を削除
+        if path in self.preview_photos:
+            del self.preview_photos[path]
+
+        # UIからエントリを削除
+        if path in self.image_entries:
+            self.image_entries[path].destroy()
+            del self.image_entries[path]
+
+        # 全て削除されたら空メッセージを表示
+        if not self.saved_images:
+            self._show_empty_message()
+            self.canvas.yview_moveto(0)
+
+        self._update_status("削除しました")
+
+    def _clear_all(self):
+        """すべての画像を削除"""
+        if not self.saved_images:
+            return
+
+        # すべてのファイルを削除
+        for path in self.saved_images:
+            path.unlink(missing_ok=True)
+
+        # すべてのUIエントリを削除
+        for frame in self.image_entries.values():
+            frame.destroy()
+
+        # リストをクリア
+        self.saved_images.clear()
+        self.preview_photos.clear()
+        self.image_entries.clear()
+
+        # 空メッセージを表示
+        self._show_empty_message()
+
+        # スクロール位置を一番上に戻す
+        self.canvas.yview_moveto(0)
+
+        self._update_status("すべて削除しました")
+
+    def _show_empty_message(self):
+        """空の状態のメッセージを表示"""
+        self.empty_label = ttk.Label(
+            self.scrollable_frame,
+            text="ここに画像がプレビューされます",
+            anchor="center",
+        )
+        self.empty_label.pack(pady=50)
 
     def _on_close(self):
         """アプリ終了時のクリーンアップ"""
