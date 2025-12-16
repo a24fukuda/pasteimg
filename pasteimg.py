@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Pasteimg MCP Server
 クリップボードから画像を受け取り、一時ディレクトリに保存するツール
