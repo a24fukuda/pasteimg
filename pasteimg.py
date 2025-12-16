@@ -14,12 +14,13 @@ import tempfile
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
+from typing import Any
 
 from PIL import Image, ImageGrab, ImageTk
 
 
 class PasteimgApp:
-    def __init__(self):
+    def __init__(self) -> None:
         # 一時ディレクトリに保存
         self.temp_dir = Path(tempfile.gettempdir()) / "pasteimg"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +49,7 @@ class PasteimgApp:
         # 終了時のクリーンアップを登録
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-    def _build_ui(self):
+    def _build_ui(self) -> None:
         # スタイル設定
         style = ttk.Style()
         style.configure("TLabel", background="#2d2d2d", foreground="#ffffff")
@@ -145,16 +146,16 @@ class PasteimgApp:
         )
         self.empty_label.pack(pady=50)
 
-    def _on_canvas_configure(self, event):
+    def _on_canvas_configure(self, event: tk.Event[Any]) -> None:
         """キャンバスのリサイズ時にフレーム幅を調整"""
         self.canvas.itemconfig(self.canvas_window, width=event.width)
 
-    def _on_mousewheel(self, event):
+    def _on_mousewheel(self, event: tk.Event[Any]) -> None:
         """マウスホイールでスクロール（コンテンツがはみ出している場合のみ）"""
         if self.scrollable_frame.winfo_height() > self.canvas.winfo_height():
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-    def _on_paste(self, event):
+    def _on_paste(self, event: tk.Event[Any]) -> None:
         """クリップボードから画像を取得して保存"""
         try:
             image = ImageGrab.grabclipboard()
@@ -192,7 +193,7 @@ class PasteimgApp:
         except Exception as e:
             self._update_status(f"エラー: {e}", error=True)
 
-    def _add_image_entry(self, image: Image.Image, path: Path):
+    def _add_image_entry(self, image: Image.Image, path: Path) -> None:
         """画像エントリをリストに追加"""
         # エントリフレーム
         entry_frame = ttk.Frame(self.scrollable_frame)
@@ -256,15 +257,14 @@ class PasteimgApp:
         # エントリを管理用辞書に追加
         self.image_entries[path] = entry_frame
 
-    def _create_tooltip(self, widget, text: str):
+    def _create_tooltip(self, widget: ttk.Label, text: str) -> None:
         """ツールチップを作成"""
         tooltip = None
 
-        def show_tooltip(event):
+        def show_tooltip(event: tk.Event[Any]) -> None:
             nonlocal tooltip
-            x, y, _, _ = widget.bbox("insert") if widget.bbox("insert") else (0, 0, 0, 0)
-            x += widget.winfo_rootx() + 10
-            y += widget.winfo_rooty() + widget.winfo_height() + 5
+            x = widget.winfo_rootx() + 10
+            y = widget.winfo_rooty() + widget.winfo_height() + 5
 
             tooltip = tk.Toplevel(widget)
             tooltip.wm_overrideredirect(True)
@@ -284,7 +284,7 @@ class PasteimgApp:
             )
             label.pack()
 
-        def hide_tooltip(event):
+        def hide_tooltip(event: tk.Event[Any]) -> None:
             nonlocal tooltip
             if tooltip:
                 tooltip.destroy()
@@ -293,7 +293,7 @@ class PasteimgApp:
         widget.bind("<Enter>", lambda e: (show_tooltip(e), widget.configure(style="PathHover.TLabel")), add=True)
         widget.bind("<Leave>", lambda e: (hide_tooltip(e), widget.configure(style="Path.TLabel")), add=True)
 
-    def _copy_path(self, path: Path, label: ttk.Label):
+    def _copy_path(self, path: Path, label: ttk.Label) -> None:
         """パスをコピーしてフィードバック表示"""
         self.root.clipboard_clear()
         self.root.clipboard_append(str(path))
@@ -303,7 +303,7 @@ class PasteimgApp:
         label.configure(text="Copied!", style="Path.TLabel")
         self.root.after(500, lambda: label.configure(text=original_text))
 
-    def _update_status(self, message: str, error: bool = False):
+    def _update_status(self, message: str, *, error: bool = False) -> None:
         """ステータスを更新"""
         self.status_label.configure(
             text=message,
@@ -311,7 +311,7 @@ class PasteimgApp:
         )
         print(f"[{'ERROR' if error else 'INFO'}] {message}")
 
-    def _delete_image(self, path: Path):
+    def _delete_image(self, path: Path) -> None:
         """指定した画像を削除"""
         # ファイルを削除
         path.unlink(missing_ok=True)
@@ -336,7 +336,7 @@ class PasteimgApp:
 
         self._update_status("削除しました")
 
-    def _clear_all(self):
+    def _clear_all(self) -> None:
         """すべての画像を削除"""
         if not self.saved_images:
             return
@@ -362,7 +362,7 @@ class PasteimgApp:
 
         self._update_status("すべて削除しました")
 
-    def _show_empty_message(self):
+    def _show_empty_message(self) -> None:
         """空の状態のメッセージを表示"""
         self.empty_label = ttk.Label(
             self.scrollable_frame,
@@ -371,13 +371,13 @@ class PasteimgApp:
         )
         self.empty_label.pack(pady=50)
 
-    def _on_close(self):
+    def _on_close(self) -> None:
         """アプリ終了時のクリーンアップ"""
         for path in self.saved_images:
             path.unlink(missing_ok=True)
         self.root.destroy()
 
-    def run(self):
+    def run(self) -> None:
         """アプリケーションを実行"""
         print("Pasteimg MCP Server を起動しました")
         print(f"保存先: {self.temp_dir}")
@@ -385,7 +385,7 @@ class PasteimgApp:
         self.root.mainloop()
 
 
-def main():
+def main() -> None:
     app = PasteimgApp()
     app.run()
 
