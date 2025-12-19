@@ -38,9 +38,6 @@ class PasteimgApp:
         self.root.minsize(400, 300)
         self.root.configure(bg="#2d2d2d")
 
-        # 常に最前面に表示
-        self.root.attributes("-topmost", True)
-
         # UI構築
         self._build_ui()
 
